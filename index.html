@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mini Instagram</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#000;
+  color:white;
+}
+
+/* TOP BAR */
+.topbar{
+  position:fixed;
+  top:0;
+  width:100%;
+  background:#000;
+  border-bottom:1px solid #222;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 15px;
+  z-index:100;
+}
+
+.logo{
+  font-weight:bold;
+  font-size:18px;
+}
+
+/* CONTAINER */
+.container{
+  max-width:500px;
+  margin:auto;
+  padding-top:60px;
+  padding-bottom:80px;
+}
+
+/* POST */
+.post{
+  border-bottom:1px solid #222;
+  padding:10px 0;
+}
+
+.post-header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:0 10px;
+}
+
+.post-header img{
+  width:35px;
+  height:35px;
+  border-radius:50%;
+  object-fit:cover;
+}
+
+.username{
+  font-weight:bold;
+  font-size:14px;
+}
+
+/* IMAGE */
+.post img.post-img{
+  width:100%;
+  margin-top:10px;
+}
+
+/* ACTIONS */
+.actions{
+  display:flex;
+  gap:15px;
+  padding:10px;
+}
+
+button{
+  background:none;
+  border:none;
+  color:white;
+  font-size:16px;
+  cursor:pointer;
+}
+
+/* CAPTION */
+.caption{
+  padding:0 10px 10px;
+  font-size:14px;
+}
+
+/* BOTTOM INPUT */
+.input-bar{
+  position:fixed;
+  bottom:0;
+  width:100%;
+  background:#000;
+  border-top:1px solid #222;
+  padding:10px;
+  display:flex;
+  gap:10px;
+}
+
+.input-bar input{
+  flex:1;
+  padding:8px;
+  border-radius:20px;
+  border:none;
+}
+
+.input-bar button{
+  background:#0095f6;
+  border-radius:20px;
+  padding:8px 12px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+  <div class="logo">Instagram Clone</div>
+  <button onclick="login()">Login</button>
+</div>
+
+<div class="container" id="feed"></div>
+
+<div class="input-bar">
+  <input id="text" placeholder="Write something...">
+  <button onclick="post()">Post</button>
+</div>
+
+<script>
+/* 🔥 YOUR FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyAIjEsGkSDWhNbGYp30x-hRVW8w4VHu_DQ",
+  authDomain: "mediatek-ee855.firebaseapp.com",
+  databaseURL: "https://mediatek-ee855-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "mediatek-ee855",
+  storageBucket: "mediatek-ee855.firebasestorage.app",
+  messagingSenderId: "1079582280722",
+  appId: "1:1079582280722:web:7304f8edcd72e93ced1ccb"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let user = null;
+
+/* LOGIN */
+function login(){
+  const provider = new firebase.auth.GoogleAuthProvider();
+
+  auth.signInWithPopup(provider).then(res=>{
+    user = res.user;
+  });
+}
+
+/* POST */
+function post(){
+  if(!user) return alert("Login first");
+
+  const text = document.getElementById("text").value;
+
+  db.collection("posts").add({
+    uid: user.uid,
+    name: user.displayName,
+    photo: user.photoURL,
+    text,
+    likes: [],
+    created: Date.now()
+  });
+
+  document.getElementById("text").value = "";
+}
+
+/* LIKE */
+function like(id, likes){
+  if(!user) return;
+
+  let arr = likes || [];
+
+  if(arr.includes(user.uid)){
+    arr = arr.filter(x => x !== user.uid);
+  } else {
+    arr.push(user.uid);
+  }
+
+  db.collection("posts").doc(id).update({
+    likes: arr
+  });
+}
+
+/* LOAD */
+db.collection("posts").orderBy("created","desc")
+.onSnapshot(snap=>{
+  const feed = document.getElementById("feed");
+  feed.innerHTML = "";
+
+  snap.forEach(doc=>{
+    const p = doc.data();
+
+    feed.innerHTML += `
+      <div class="post">
+
+        <div class="post-header">
+          <img src="${p.photo}">
+          <div class="username">${p.name}</div>
+        </div>
+
+        <div class="caption">${p.text || ""}</div>
+
+        <div class="actions">
+          <button onclick='like("${doc.id}", ${JSON.stringify(p.likes || [])})'>
+            ❤️ ${p.likes ? p.likes.length : 0}
+          </button>
+          <button onclick="comment()">💬</button>
+        </div>
+
+      </div>
+    `;
+  });
+});
+
+/* COMMENT SIMPLE */
+function comment(){
+  alert("Comment system next upgrade 👍");
+}
+</script>
+
+</body>
+</html>
